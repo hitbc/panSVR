@@ -1,0 +1,11 @@
+#!/bin/bash
+
+#build panSV
+cd ./Release
+make -j 8
+cd ../deBGA/src
+make -j 8
+cd ../../
+
+cp ./deBGA/deBGA ./
+cp ./Release/panSV ./
