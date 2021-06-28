@@ -8,4 +8,4 @@ make -j 8
 cd ../../
 
 cp ./deBGA_release/deBGA ./
-cp ./Release/panSV ./
+cp ./Release/panSVR ./
