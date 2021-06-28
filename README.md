@@ -118,6 +118,7 @@ Detail information will be provided in the next sections.
     -h --help                       show this message 
 ```
 For deBWA index
+
 **Usage**
 ```
 Usage:   deBGA index [options] reference.fasta <index_route> 
