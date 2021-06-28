@@ -3,9 +3,9 @@
 #build panSV
 cd ./Release
 make -j 8
-cd ../deBGA/src
+cd ../deBGA_release/src
 make -j 8
 cd ../../
 
-cp ./deBGA/deBGA ./
+cp ./deBGA_release/deBGA ./
 cp ./Release/panSV ./
