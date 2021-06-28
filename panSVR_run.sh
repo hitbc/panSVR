@@ -42,7 +42,7 @@ SIGNAL_FASTQ=${work_dir}/signal.fastq.gz
 
 SIGNAL_LOG=${work_dir}/signal.log
 
-./jlra_aln signal -D -U ${BAM_file} -H ${SAM_HEADER_FILE} 2> ${SIGNAL_LOG} | pigz -p 8 -- > ${SIGNAL_FASTQ}
+./PanSVR signal -D -U ${BAM_file} -H ${SAM_HEADER_FILE} 2> ${SIGNAL_LOG} | pigz -p 8 -- > ${SIGNAL_FASTQ}
 
 #SIGNAL alignment
 
@@ -50,7 +50,7 @@ PANSV_ALN_NAME=${work_dir}/panSV_aln.sort_name.bam
 PANSV_ALN_POS=${work_dir}/panSV_aln.sort_pos.bam
 PANSV_ALN_LOG=${work_dir}/panSV_aln.log
 
-./jlra_aln aln -t 24 -o ${PANSV_ALN_NAME} ${deBGA_INDEX_DIR} ${SIGNAL_FASTQ} ${SAM_HEADER_FILE} 2> ${PANSV_ALN_LOG} 1>${PANSV_ALN_LOG} 
+./PanSVR aln -t 24 -o ${PANSV_ALN_NAME} ${deBGA_INDEX_DIR} ${SIGNAL_FASTQ} ${SAM_HEADER_FILE} 2> ${PANSV_ALN_LOG} 1>${PANSV_ALN_LOG} 
 samtools sort --output-fmt=BAM -@ 8 -o ${PANSV_ALN_POS} ${PANSV_ALN_NAME}
 samtools index ${PANSV_ALN_POS}
 
@@ -58,6 +58,6 @@ samtools index ${PANSV_ALN_POS}
 
 GENERATE_VCF_LOG=${work_dir}/generate_vcf.log
 
-./jlra_aln assembly -S 0 -s 0 -E 0 -F 300000000 -e 200 -M 80 -L 2000000 ${deBGA_INDEX_DIR} ${PANSV_ALN_POS} ${SAM_HEADER_FILE} ${reference} -o ${VCF_result} 2> ${GENERATE_VCF_LOG}
+./PanSVR assembly -S 0 -s 0 -E 0 -F 300000000 -e 200 -M 80 -L 2000000 ${deBGA_INDEX_DIR} ${PANSV_ALN_POS} ${SAM_HEADER_FILE} ${reference} -o ${VCF_result} 2> ${GENERATE_VCF_LOG}
 
 echo "End process"
