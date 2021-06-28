@@ -47,13 +47,13 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: panSV
+all: panSVR
 
 # Tool invocations
-panSV: $(OBJS) $(USER_OBJS)
+panSVR: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross G++ Linker'
-	g++  -o "panSV" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++  -o "panSVR" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
