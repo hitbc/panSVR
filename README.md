@@ -9,10 +9,7 @@ PanSVR: pan-genome augmented short read realignment for sensitive detection of s
 3. [Introduction](#Introduction)
 4. [Memory usage](#Memory-usage)
 5. [Build project](#build-project)
-6. [Simple run](#build-index)
-7. [Run using self-defined parameters](#run-classifation)
-8. [Run analysis](#run-analysis)
-9. [Demo data](#Demo-data)
+6. [Run using self-defined parameters](#run-classifation)
 
 ## Dependency
 
@@ -29,6 +26,8 @@ sudo apt-get install pigz
 
 ```
 ## Quick start
+An SV anchor reference file( Ref to "Anchor reference building" section to build one from VCF files.), a reference file and an alignment results files(BAM/SAM/CRAM sorted) are needed to run panSVR.
+
 ```
 git clone https://github.com/hitbc/PanSVR.git
 cd ./PanSVR
