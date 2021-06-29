@@ -78,7 +78,7 @@ bash ./panSVR_run.sh <SV_database> <reference> <work_dir> <BAM_file> <result>
 
 ## Self-defined running mode
 
-PanSVR is a pipeline program which include multiple steps. User can runng all steps seperately when needed.
+PanSVR is a pipeline program which includes multiple steps. User can runng all steps seperately when needed.
 
 Firstly, an SV_database containing anchor references for read realignment need to be built uisng './panSVR sv_ref' command. Than a deBGA index file are needed and users can used 
 "./deBGA index" to build one. Next, signals will be extracted from BAM/CRAM file using "./panSVR signal" command. Next, signals needed to be realignment using "./panSVR aln" command. 
