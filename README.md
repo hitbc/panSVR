@@ -34,7 +34,8 @@ git clone https://github.com/hitbc/PanSVR.git
 cd ./PanSVR
 bash ./build
 #SV calling
-./PanSVR classify -t 4 ./demo_index ./demo/ERR1050068.fastq -o ./ERR1050068.sam
+mkdir ./panSVR_word_dir
+bash ./panSV_run.sh ./demo.sv_ref.fa ./hs37d5.fa ./panSVR_word_dir ./demo.bam ./panSVR_rst.vcf
 ```
 
 ## Introduction
@@ -45,7 +46,7 @@ PanSVR fits best for BWA-MEM, it is recommanded to use BWA-MEM as the aligner be
 
 ## Memory usage
 
-Normally, PanSVR used less than 4 Gigabytes memory in all steps. Besides, 100 Gigabytes space in hard disk is needed to store tmp files. 
+Normally, PanSVR used less than 4 Gigabytes memory in all steps. Besides, 30 Gigabytes space in hard disk is needed to store tmp files. 
 
 ## Build project
 
