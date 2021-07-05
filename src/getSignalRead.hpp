@@ -1,10 +1,3 @@
-/*
- * getSignalRead.hpp
- *
- *  Created on: 2021年3月16日
- *      Author: fenghe
- */
-
 #ifndef GETSIGNALREAD_HPP_
 #define GETSIGNALREAD_HPP_
 
@@ -15,7 +8,7 @@
 #include "stdlib.h"
 
 #include "cpp_lib/get_option_cpp.hpp"
-
+#include "cpp_lib/statistics/StatsManager.hpp"
 extern "C"
 {
 #include "clib/utils.h"
@@ -33,7 +26,140 @@ extern "C"
 
 #define MAX_TID 24
 
+#define MAX_ISIZE 100000 //0.1M
+#define MAX_ANA_READ_LEN 1000 //1000
+#define HUMAN_GENOME_SIZE 3100000000 //3.1G
+
+struct BAM_STAT{
+
+	//global analysis variables
+	uint32_t reasonFlagCounter[1024];
+	uint64_t *isize_analysis;
+	uint64_t *read_length_analysis;
+	double read_normal_percent;
+	uint64_t total_read_number;
+	//analysis results before getting all signals by sampling
+	uint32_t minInsertLen;
+	uint32_t middleInsertLen;
+	uint32_t maxInsertLen;
+	int analysis_read_length;
+	//analysis results after all data is processed
+	uint32_t minInsertLen_l2;
+	uint32_t maxInsertLen_l2;
+	double ave_read_depth;
+
+	bool already_init = false;
+
+	void init(){
+		//memory init
+		isize_analysis = (uint64_t *)xmalloc(MAX_ISIZE * sizeof(uint64_t));
+		read_length_analysis = (uint64_t *)xmalloc(MAX_ANA_READ_LEN * sizeof(uint64_t));
+		reset();
+	}
+
+	void reset(){
+		total_read_number = 0;
+		memset(isize_analysis, 0, MAX_ISIZE* sizeof(uint64_t));
+		memset(read_length_analysis, 0, MAX_ANA_READ_LEN* sizeof(uint64_t));
+		memset(reasonFlagCounter, 0, 1024* sizeof(uint32_t));
+	}
+
+	void destory(){
+		free(isize_analysis);
+		free(read_length_analysis);
+	}
+
+	void collect_signal(bam1_t &c_read){
+		//global analysis:
+		//get ISIZE:
+		int isize = ABS(c_read.core.isize);
+		if(isize > 0 && isize < MAX_ISIZE){
+			isize_analysis[isize]++;
+		}
+		//get read_length
+		if(c_read.core.l_qseq < MAX_ANA_READ_LEN)
+			read_length_analysis[c_read.core.l_qseq]++;
+	}
+
+	void global_analysis_stat(){
+		//output analysis results
+		//part1: get normal read length
+		analysis_read_length = -1;
+		for(int i = 0; i < MAX_ANA_READ_LEN; i++){ if(read_length_analysis[i] > 0.6*total_read_number){ analysis_read_length = i; read_normal_percent = (double)read_length_analysis[i]/total_read_number; break; } }
+		//part2:  get read depth:
+		ave_read_depth = (double)analysis_read_length * total_read_number /HUMAN_GENOME_SIZE;
+		//part3: max and min ISIZE
+		minInsertLen_l2 = 0; maxInsertLen_l2 = 0;
+		float max_percent_abnormal_isize = 0.01;
+		int max_abnormal_read_number_one_side = max_percent_abnormal_isize * total_read_number;
+		int read_number_sum = 0;
+		for(int i = 0; i < MAX_ISIZE; i++){
+			read_number_sum += isize_analysis[i];
+			if(read_number_sum > max_abnormal_read_number_one_side){
+				minInsertLen_l2 = i; break;
+			}
+		}
+		read_number_sum = 0;
+		for(int i = MAX_ISIZE - 1; i > 0; i--){
+			read_number_sum += isize_analysis[i];
+			if(read_number_sum > max_abnormal_read_number_one_side){
+				maxInsertLen_l2 = i; break;
+			}
+		}
+	}
+
+	void sampling_analysis_stat(const char * ref_fn, char * input_bam_fn, bool bam_sort_by_name){
+		//reset
+		if(already_init){ reset(); } else{ init(); already_init = true; }
+		//get read length and simple ISIZE
+		//it is recommended to use sorted bam/cram files
+		Bam_file c_b;
+		memset(&c_b, 0, sizeof(Bam_file));
+		bam_file_open(input_bam_fn, ref_fn, NULL, &c_b);
+		bam_hdr_t* hdr = c_b._hdr;
+		total_read_number = 0;
+		bam1_t b1 = {0};//BAM record for the first read in a pair
+		int sam_rst1 = 0;
+		while (1){
+			//load SAM 1 & 2
+			do{	sam_rst1 = sam_read1(c_b._hfp, hdr, &b1); } while( (sam_rst1 >= 0) && (bam_is_secondary(&b1) || bam_is_supplementary(&b1)));
+			if(sam_rst1 < 0)		break;
+			total_read_number ++;
+			if(total_read_number == 100000)
+				break;
+			collect_signal(b1);
+		}
+		bam_file_close(&c_b);
+		global_analysis_stat();
+
+		if(!bam_sort_by_name){
+			//get ISZIE by sampling (from MANTA)
+			StatsManager rstats(ref_fn, "");
+			rstats.handleBamCramStats(input_bam_fn);
+			minInsertLen = rstats.getInsertLen(input_bam_fn, 0.01f);
+			middleInsertLen = rstats.getInsertLen(input_bam_fn, 0.5f);
+			maxInsertLen = rstats.getInsertLen(input_bam_fn, 0.99f);
+		}else{
+			//it is recommended to use sorted bam/cram files
+			minInsertLen = minInsertLen_l2;
+			middleInsertLen = (minInsertLen_l2 + maxInsertLen_l2)/2;
+			maxInsertLen = maxInsertLen_l2;
+		}
+		fprintf(stderr, "%d @ %f%% %d %d %d\n", analysis_read_length, read_normal_percent*100, minInsertLen, middleInsertLen, maxInsertLen);
+	}
+
+	void output_full_stat(FILE * output){
+		for(int i = 0; i < 128; i++)
+			fprintf(output, "flag:\t%d\tcount:\t%d\n", i, reasonFlagCounter[i]);
+	}
+
+	void output_final_stat(FILE * output){
+		fprintf(output, "%f_%d_%d_%d_", ave_read_depth, analysis_read_length, minInsertLen_l2, maxInsertLen_l2);
+	}
+};
+
 struct READ_SIGNAL_HANDLER{
+	//output options
 	FILE * output_file1 = NULL;
 	FILE * output_file2 = NULL;
 
@@ -51,29 +177,33 @@ struct READ_SIGNAL_HANDLER{
 	bool not_filter_low_quality;
 	char *ref_fn;
 	const char *out_header_fn;
+	const char *out_status_fn;
 	bool NOT_USING_FILTER;
 	bool discard_both_full_match;
 	double sample_rate;
 	int sample_max_number_int;
 
+	//buffs
 	Bam_file c_b;
 	bam_hdr_t* hdr = NULL;
-	uint32_t reasonFlagCounter[1024];
-	int penalty1, penalty2, penalty;
 
+	//global analysis variables
+	BAM_STAT bs;
+	bool already_output_isize = false;
+
+	//functions
 	uint32_t getScoreByCigar(bam1_t* b);
 	//return 0 when no XA, 1~5 when has <= 5 XA , 6 when has more than 6 XA
 	//when mapq == 0, BWA-MEM return at most 5 alt alignment when score are same, other wise XA is blank
 	void all_signal_records_read_pair(bam1_t &read1, bam1_t &read2, bool will_Be_used);
+	void stat_analysis(bam1_t &c_read);
 	bool signal_be_used();
 	void SURVIVOR_SV_region_get_all_signal_records_SORT_BY_pos(char *input_bam_fn);
 	void SURVIVOR_SV_region_get_all_signal_records_SORT_BY_NAME();
 
 	int init_run(int argc, char *argv[]){
-
 		//option list
 		options_list l;
-
 	    l.add_title_string("\n");
 	    l.add_title_string("Usage:     ");  l.add_title_string(PACKAGE_NAME);
 	    l.add_title_string("  signal  [Options] <BAM/CRAM file> \n");
@@ -101,6 +231,8 @@ struct READ_SIGNAL_HANDLER{
 		l.add_option("reference",  		'r', "the reference file used for CRAM file", false, ""); l.set_arg_pointer_back((void *)&ref_fn);
 		l.add_option("header-file",     'H', "output BAM/CRAM header file of input file", true, "./header.sam"); l.set_arg_pointer_back((void *)&out_header_fn);
 		l.add_help_msg_back("this file will be used in [aln] command");
+		l.add_option("status-file",     'S', "output BAM/CRAM status file of input file", true, "./status.sam"); l.set_arg_pointer_back((void *)&out_status_fn);
+		l.add_help_msg_back("Include informations about depth, AVERAGE ISZIE and normal read length, etc. This may be used in assembly command");
 		l.add_option("not-use-filter",  'D', "do not using signal filter but output all reads as signal"); l.set_arg_pointer_back((void *)&NOT_USING_FILTER);
 		l.add_option("discard-full-match",  'U', "-U has higher priority level than -D, discard read pair when both reads are aligned without any clip or error"); l.set_arg_pointer_back((void *)&discard_both_full_match);
 		double default_sample_rate = 1;
@@ -108,9 +240,24 @@ struct READ_SIGNAL_HANDLER{
 
 		fprintf(stderr, "V1.23\n");
 		if(l.default_option_handler(argc, argv)) return 1;
-
 		if (argc - optind < 1)	return l.output_usage();
 		char *input_bam_fn = argv[optind];
+
+//		if(1){
+//			unsigned minInsertLen, middleInsertLen, maxInsertLen;
+//				//get ISZIE by sampling (from MANTA)
+//				StatsManager rstats(ref_fn, "");
+//				rstats.handleBamCramStats(input_bam_fn);
+//				minInsertLen = rstats.getInsertLen(input_bam_fn, 0.01f);
+//				middleInsertLen = rstats.getInsertLen(input_bam_fn, 0.5f);
+//				maxInsertLen = rstats.getInsertLen(input_bam_fn, 0.99f);
+//			fprintf(stderr, "%d %d %d\n", minInsertLen, middleInsertLen, maxInsertLen);
+//			exit(0);
+//		}
+
+		bs.sampling_analysis_stat(ref_fn, input_bam_fn, bam_sort_by_name);
+		bs.reset();
+		if(0){ exit(0); }
 
 		output_file1 = stdout;//xzopen(out_fn_read1, "wb");
 		output_file2 = stdout;//xzopen(out_fn_read2, "wb");
@@ -129,13 +276,17 @@ struct READ_SIGNAL_HANDLER{
 			hts_close(out_header_file);
 		}
 
-		memset(reasonFlagCounter, 0, 1024* sizeof(uint32_t));
 		if(bam_sort_by_name)	SURVIVOR_SV_region_get_all_signal_records_SORT_BY_NAME();
 		else					SURVIVOR_SV_region_get_all_signal_records_SORT_BY_pos(input_bam_fn);
 
 		bam_file_close(&c_b);
-		for(int i = 0; i < 128; i++)
-			fprintf(stderr, "flag:\t%d\tcount:\t%d\n", i, reasonFlagCounter[i]);
+
+		bs.global_analysis_stat();
+		//output analysis result
+		FILE * status_output = xopen(out_status_fn, "w");
+		bs.output_final_stat(status_output);
+		fclose(status_output);
+
 		return 0;
 	}
 
