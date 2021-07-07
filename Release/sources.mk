@@ -29,6 +29,7 @@ src/cpp_lib/Assembler \
 src/cpp_lib/MSA/abPOA \
 src/cpp_lib/MSA \
 src/cpp_lib \
+src/cpp_lib/statistics \
 src/generateVCF \
 src/htslib \
 src/htslib/cram \

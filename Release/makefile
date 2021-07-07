@@ -12,6 +12,7 @@ RM := rm -rf
 -include src/htslib/cram/subdir.mk
 -include src/htslib/subdir.mk
 -include src/generateVCF/subdir.mk
+-include src/cpp_lib/statistics/subdir.mk
 -include src/cpp_lib/MSA/abPOA/subdir.mk
 -include src/cpp_lib/MSA/subdir.mk
 -include src/cpp_lib/Assembler/subdir.mk
@@ -59,7 +60,7 @@ panSVR: $(OBJS) $(USER_OBJS)
 
 # Other Targets
 clean:
-	-$(RM) $(CC_DEPS)$(C++_DEPS)$(EXECUTABLES)$(OBJS)$(C_UPPER_DEPS)$(CXX_DEPS)$(C_DEPS)$(CPP_DEPS) panSV
+	-$(RM) $(CC_DEPS)$(C++_DEPS)$(EXECUTABLES)$(OBJS)$(C_UPPER_DEPS)$(CXX_DEPS)$(C_DEPS)$(CPP_DEPS) panSVR
 	-@echo ' '
 
 .PHONY: all clean dependents
