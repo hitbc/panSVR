@@ -182,7 +182,7 @@ void READ_SIGNAL_HANDLER::all_signal_records_read_pair(bam1_t &read1, bam1_t &re
 		//read 1 or 2 flag
 		xassert(bam_is_first(b[0]), "");
 		xassert(bam_is_second(b[1]), "");
-		reasonFlagCounter[reasonFlag] ++;
+		//reasonFlagCounter[reasonFlag] ++;
 
 		xassert(b[0]->core.l_qseq < MAX_ACCECPT_READ_LEN, "");
 
