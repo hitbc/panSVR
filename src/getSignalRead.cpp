@@ -48,6 +48,7 @@ uint32_t READ_SIGNAL_HANDLER::getScoreByCigar(bam1_t* b){
 		{
 			int type = (int)(1 + (bam_cigar[i] & BAM_CIGAR_MASK));
 			int length = (bam_cigar[i] >> BAM_CIGAR_SHIFT);
+			int penalty,penalty1,penalty2;
 			switch (type)
 			{
 			case CIGAR_MATCH:
