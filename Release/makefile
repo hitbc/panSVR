@@ -11,26 +11,22 @@ RM := rm -rf
 -include src/kswlib/subdir.mk
 -include src/htslib/cram/subdir.mk
 -include src/htslib/subdir.mk
--include src/generateVCF/subdir.mk
 -include src/cpp_lib/statistics/subdir.mk
--include src/cpp_lib/MSA/abPOA/subdir.mk
--include src/cpp_lib/MSA/subdir.mk
 -include src/cpp_lib/Assembler/subdir.mk
 -include src/cpp_lib/subdir.mk
 -include src/clib/subdir.mk
+-include src/PanSVgenerateVCF/subdir.mk
+-include src/NovaSVgenerateVCF/subdir.mk
 -include src/subdir.mk
--include subdir.mk
--include objects.mk
-
 ifneq ($(MAKECMDGOALS),clean)
-ifneq ($(strip $(CC_DEPS)),)
--include $(CC_DEPS)
-endif
 ifneq ($(strip $(C++_DEPS)),)
 -include $(C++_DEPS)
 endif
-ifneq ($(strip $(C_UPPER_DEPS)),)
--include $(C_UPPER_DEPS)
+ifneq ($(strip $(CC_DEPS)),)
+-include $(CC_DEPS)
+endif
+ifneq ($(strip $(CPP_DEPS)),)
+-include $(CPP_DEPS)
 endif
 ifneq ($(strip $(CXX_DEPS)),)
 -include $(CXX_DEPS)
@@ -38,31 +34,45 @@ endif
 ifneq ($(strip $(C_DEPS)),)
 -include $(C_DEPS)
 endif
-ifneq ($(strip $(CPP_DEPS)),)
--include $(CPP_DEPS)
+ifneq ($(strip $(C_UPPER_DEPS)),)
+-include $(C_UPPER_DEPS)
 endif
 endif
 
 -include ../makefile.defs
 
+OPTIONAL_TOOL_DEPS := \
+$(wildcard ../makefile.defs) \
+$(wildcard ../makefile.init) \
+$(wildcard ../makefile.targets) \
+
+
+BUILD_ARTIFACT_NAME := panSVR
+BUILD_ARTIFACT_EXTENSION :=
+BUILD_ARTIFACT_PREFIX :=
+BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
+
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: panSVR
+all: main-build
+
+# Main-build Target
+main-build: panSVR
 
 # Tool invocations
-panSVR: $(OBJS) $(USER_OBJS)
+panSVR: $(OBJS) $(USER_OBJS) makefile $(OPTIONAL_TOOL_DEPS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross G++ Linker'
-	g++  -o "panSVR" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++  -o "panSVR" $(OBJS) $(USER_OBJS) $(LIBS) -lz -lpthread
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(CC_DEPS)$(C++_DEPS)$(EXECUTABLES)$(OBJS)$(C_UPPER_DEPS)$(CXX_DEPS)$(C_DEPS)$(CPP_DEPS) panSVR
+	-$(RM) panSVR
 	-@echo ' '
 
-.PHONY: all clean dependents
+.PHONY: all clean dependents main-build
 
 -include ../makefile.targets

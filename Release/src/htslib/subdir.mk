@@ -33,36 +33,6 @@ C_SRCS += \
 ../src/htslib/vcf_sweep.c \
 ../src/htslib/vcfutils.c 
 
-OBJS += \
-./src/htslib/bcf_sr_sort.o \
-./src/htslib/bgzf.o \
-./src/htslib/bgzip.o \
-./src/htslib/errmod.o \
-./src/htslib/faidx.o \
-./src/htslib/hfile.o \
-./src/htslib/hfile_gcs.o \
-./src/htslib/hfile_net.o \
-./src/htslib/hts.o \
-./src/htslib/hts_os.o \
-./src/htslib/htsfile.o \
-./src/htslib/kfunc.o \
-./src/htslib/knetfile.o \
-./src/htslib/kstring.o \
-./src/htslib/md5.o \
-./src/htslib/multipart.o \
-./src/htslib/probaln.o \
-./src/htslib/realn.o \
-./src/htslib/regidx.o \
-./src/htslib/sam.o \
-./src/htslib/synced_bcf_reader.o \
-./src/htslib/tabix.o \
-./src/htslib/tbx.o \
-./src/htslib/textutils.o \
-./src/htslib/thread_pool.o \
-./src/htslib/vcf.o \
-./src/htslib/vcf_sweep.o \
-./src/htslib/vcfutils.o 
-
 C_DEPS += \
 ./src/htslib/bcf_sr_sort.d \
 ./src/htslib/bgzf.d \
@@ -93,13 +63,50 @@ C_DEPS += \
 ./src/htslib/vcf_sweep.d \
 ./src/htslib/vcfutils.d 
 
+OBJS += \
+./src/htslib/bcf_sr_sort.o \
+./src/htslib/bgzf.o \
+./src/htslib/bgzip.o \
+./src/htslib/errmod.o \
+./src/htslib/faidx.o \
+./src/htslib/hfile.o \
+./src/htslib/hfile_gcs.o \
+./src/htslib/hfile_net.o \
+./src/htslib/hts.o \
+./src/htslib/hts_os.o \
+./src/htslib/htsfile.o \
+./src/htslib/kfunc.o \
+./src/htslib/knetfile.o \
+./src/htslib/kstring.o \
+./src/htslib/md5.o \
+./src/htslib/multipart.o \
+./src/htslib/probaln.o \
+./src/htslib/realn.o \
+./src/htslib/regidx.o \
+./src/htslib/sam.o \
+./src/htslib/synced_bcf_reader.o \
+./src/htslib/tabix.o \
+./src/htslib/tbx.o \
+./src/htslib/textutils.o \
+./src/htslib/thread_pool.o \
+./src/htslib/vcf.o \
+./src/htslib/vcf_sweep.o \
+./src/htslib/vcfutils.o 
+
 
 # Each subdirectory must supply rules for building sources it contributes
-src/htslib/%.o: ../src/htslib/%.c
+src/htslib/%.o: ../src/htslib/%.c src/htslib/subdir.mk
 	@echo 'Building file: $<'
 	@echo 'Invoking: Cross GCC Compiler'
-	gcc -std=c++17 -I../src/htslib -O3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	gcc -std=c++17 -I../src/htslib -O3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
+
+clean: clean-src-2f-htslib
+
+clean-src-2f-htslib:
+	-$(RM) ./src/htslib/bcf_sr_sort.d ./src/htslib/bcf_sr_sort.o ./src/htslib/bgzf.d ./src/htslib/bgzf.o ./src/htslib/bgzip.d ./src/htslib/bgzip.o ./src/htslib/errmod.d ./src/htslib/errmod.o ./src/htslib/faidx.d ./src/htslib/faidx.o ./src/htslib/hfile.d ./src/htslib/hfile.o ./src/htslib/hfile_gcs.d ./src/htslib/hfile_gcs.o ./src/htslib/hfile_net.d ./src/htslib/hfile_net.o ./src/htslib/hts.d ./src/htslib/hts.o ./src/htslib/hts_os.d ./src/htslib/hts_os.o ./src/htslib/htsfile.d ./src/htslib/htsfile.o ./src/htslib/kfunc.d ./src/htslib/kfunc.o ./src/htslib/knetfile.d ./src/htslib/knetfile.o ./src/htslib/kstring.d ./src/htslib/kstring.o ./src/htslib/md5.d ./src/htslib/md5.o ./src/htslib/multipart.d ./src/htslib/multipart.o ./src/htslib/probaln.d ./src/htslib/probaln.o ./src/htslib/realn.d ./src/htslib/realn.o ./src/htslib/regidx.d ./src/htslib/regidx.o ./src/htslib/sam.d ./src/htslib/sam.o ./src/htslib/synced_bcf_reader.d ./src/htslib/synced_bcf_reader.o ./src/htslib/tabix.d ./src/htslib/tabix.o ./src/htslib/tbx.d ./src/htslib/tbx.o ./src/htslib/textutils.d ./src/htslib/textutils.o ./src/htslib/thread_pool.d ./src/htslib/thread_pool.o ./src/htslib/vcf.d ./src/htslib/vcf.o ./src/htslib/vcf_sweep.d ./src/htslib/vcf_sweep.o ./src/htslib/vcfutils.d ./src/htslib/vcfutils.o
+
+.PHONY: clean-src-2f-htslib
 
