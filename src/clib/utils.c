@@ -16,7 +16,6 @@
 #endif
 #include <sys/resource.h>
 #include "utils.h"
-#include "kstring1.h"
 #define pair64_lt(a, b) ((a).x < (b).x || ((a).x == (b).x && (a).y < (b).y))
 
 /********************
@@ -47,6 +46,7 @@ gzFile err_xzopen_core(const char *func,  const int line, const char *fn, const 
 	gzFile fp;
 	if (strcmp(fn, "-") == 0) {
 		fp = gzdopen(fileno((strstr(mode, "r"))? stdin : stdout), mode);
+		fprintf(stderr, "using stdin as input\n");
 		/* According to zlib.h, this is the only reason gzdopen can fail */
 		if (!fp) err_fatal(func, "Out of memory");
 		return fp;
@@ -674,7 +674,7 @@ inline void ks_resize(kstring_t *s, size_t size)
 }
 
 //enlarge a string
-inline void str_enlarge(kstring_t *s, int l)
+void str_enlarge(kstring_t *s, int l)
 {
 	if (s->l + l + 1 > s->m)
 	{
@@ -685,7 +685,7 @@ inline void str_enlarge(kstring_t *s, int l)
 }
 
 //store a string, == memcat
-inline int kputsn(const char *p, int l, kstring_t *s)
+int kputsn(const char *p, int l, kstring_t *s)
 {
 	if (s->l + l + 1 >= s->m) {
 		s->m = s->l + l + 2;
@@ -771,7 +771,7 @@ inline int kputl(long c, kstring_t *s)
 	return 0;
 }
 
-inline void kstrcpy(kstring_t *s, const char *st, const char *en)
+void kstrcpy(kstring_t *s, const char *st, const char *en)
 {
 	str_enlarge(s, en - st);
 	memcpy(&s->s[s->l], st, en - st);

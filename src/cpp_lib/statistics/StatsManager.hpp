@@ -182,12 +182,12 @@ struct id_map {
 	}
 
 	/// \brief Get id of inserted key
-	std::optional<unsigned> get_optional_id(const K &key) const {
+	unsigned get_optional_id(const K &key) const {
 		const typename k2id_t::const_iterator i(_k2id.find(key));
 		if (i == _k2id.end()) {
-			return std::optional<unsigned>();
+			return MAX_uint32_t;
 		}
-		return std::optional<unsigned>(i->second);
+		return i->second;
 	}
 
 	/// \brief Get id of inserted key
@@ -246,18 +246,18 @@ struct StatsManager {
 		referenceFilename(referenceFilename_), defaultStatsFilename(defaultStatsFilename_){}
 	StatsManager(){}
 
-	static void simpleGetStats(
-			const std::string &referenceFilename,
-			const std::string &alignmentFilename,
-			FILE* output) {
-		// calculate fragment size statistics for all read groups in all bams
-		StatsManager rstats(referenceFilename.c_str(), "");
-		rstats.handleBamCramStats(alignmentFilename.c_str());
-		uint32_t minInsertLen = rstats.getInsertLen(alignmentFilename.c_str(), 0.01f);
-		uint32_t middleInsertLen = rstats.getInsertLen(alignmentFilename.c_str(), 0.5f);
-		uint32_t maxInsertLen = rstats.getInsertLen(alignmentFilename.c_str(), 0.99f);
-		fprintf(output, "%d %d %d\n", minInsertLen, middleInsertLen, maxInsertLen);
-	}
+//	static void simpleGetStats(
+//			const std::string &referenceFilename,
+//			const std::string &alignmentFilename,
+//			FILE* output) {
+//		// calculate fragment size statistics for all read groups in all bams
+//		StatsManager rstats(referenceFilename.c_str(), "");
+//		rstats.handleBamCramStats(alignmentFilename.c_str());
+//		uint32_t minInsertLen = rstats.getInsertLen(alignmentFilename.c_str(), 0.01f);
+//		uint32_t middleInsertLen = rstats.getInsertLen(alignmentFilename.c_str(), 0.5f);
+//		uint32_t maxInsertLen = rstats.getInsertLen(alignmentFilename.c_str(), 0.99f);
+//		fprintf(output, "%d %d %d\n", minInsertLen, middleInsertLen, maxInsertLen);
+//	}
 
 	typedef StatLabel KeyType;
 	bool empty() const { return _group.empty(); }
@@ -274,7 +274,7 @@ struct StatsManager {
 	/// Each read group is identified as a combination of a bam filename and
 	/// an RG tag label. An empty label refers to the "default" read group
 	/// for the file (all records that had no RG tag).
-	std::optional<unsigned> getGroupIndex(const StatLabel &rgLabel) const { 	return _group.get_optional_id(rgLabel); 	}
+	unsigned getGroupIndex(const StatLabel &rgLabel) const { 	return _group.get_optional_id(rgLabel); 	}
 	/// get stats associated with index
 	const UniqueStats& getStats(const unsigned groupIndex) const { 	return _group.get_value(groupIndex); }
 	const KeyType& getKey(const unsigned groupIndex) const {	return _group.get_key(groupIndex); }
@@ -282,8 +282,8 @@ struct StatsManager {
 	void setStats(const StatLabel &rgLabel, const UniqueStats &rps) { _group.insert(rgLabel, rps); }
 
 	unsigned getMinInsertLen(const std::string &bamFilename){
-		std::optional<unsigned> idx = getGroupIndex(StatLabel(bamFilename.c_str(), ""));
-		if(idx)		return getStats(idx.value()).fragStats.quantile(0.01f);
+		unsigned idx = getGroupIndex(StatLabel(bamFilename.c_str(), ""));
+		if(idx != MAX_uint32_t)return getStats(idx).fragStats.quantile(0.01f);
 		else	{
 			std::cerr << "Warning: can`t properly get MIN insert_size for " << bamFilename <<
 					", using default_insert_size_min" << default_insert_size_min << "\n";
@@ -292,8 +292,8 @@ struct StatsManager {
 	}
 
 	unsigned getMaxInsertLen(const std::string &bamFilename){
-		std::optional<unsigned> idx = getGroupIndex(StatLabel(bamFilename.c_str(), ""));
-		if(idx)		return getStats(idx.value()).fragStats.quantile(0.99f);
+		unsigned idx = getGroupIndex(StatLabel(bamFilename.c_str(), ""));
+		if(idx != MAX_uint32_t)		return getStats(idx).fragStats.quantile(0.99f);
 		else{
 			std::cerr << "Warning: can`t properly get MAX insert_size for " << bamFilename <<
 					", using default_insert_size_max" << default_insert_size_max << "\n";
@@ -302,8 +302,8 @@ struct StatsManager {
 	}
 
 	unsigned getInsertLen(const char * bamFilename, float percent){
-		std::optional<unsigned> idx = getGroupIndex(StatLabel(bamFilename, ""));
-		if(idx)		return getStats(idx.value()).fragStats.quantile(percent);
+		unsigned idx = getGroupIndex(StatLabel(bamFilename, ""));
+		if(idx!= MAX_uint32_t)		return getStats(idx).fragStats.quantile(percent);
 		else{
 			if(percent < 0.5){
 				std::cerr << "Warning: can`t properly get isize for " << bamFilename <<
@@ -320,21 +320,22 @@ struct StatsManager {
 		}
 	}
 
-	void getBP_Distribution(const std::string &bamFilename, int read_len,
+	void getBreakPoint_Distribution(const std::string &bamFilename, int read_len,
 			std::vector<float> &DR_bp_distribution, std::vector<float> &SH_bp_distribution,
-			 std::vector<float> &UM_stPos_distribution, int &START_OFFSET_UM){
-		std::optional<unsigned> idx = getGroupIndex(StatLabel(bamFilename.c_str(), ""));
-		if(!idx){
+			std::vector<float> &UM_stPos_distribution, int &START_OFFSET_UM){
+
+		unsigned idx = getGroupIndex(StatLabel(bamFilename.c_str(), ""));
+		if(idx == MAX_uint32_t){
 			std::cerr << "Warning: can`t properly get break point distribution for "
 					<< bamFilename << "\n";
 			return;
 		}
 		//for discordant /hard clip signals break point distribution
-		int totalPairedReadCount = getStats(idx.value()).readCounter.totalHighConfidenceReadPairCount();
-		int max_len = getStats(idx.value()).fragStats.quantile(0.99f);
+		int totalPairedReadCount = getStats(idx).readCounter.totalHighConfidenceReadPairCount();
+		int max_len = getStats(idx).fragStats.quantile(0.99f);
 		int max_probability_size = max_len -  2*read_len;
 		DR_bp_distribution.clear();
-		const SizeDistribution &fragStats = getStats(idx.value()).fragStats;
+		const SizeDistribution &fragStats = getStats(idx).fragStats;
 		if(max_probability_size > 50){
 			//dis.reserve(max_len);
 			DR_bp_distribution.resize(max_probability_size, 0);
@@ -361,8 +362,8 @@ struct StatsManager {
 		int max_probability_size_SH = 10;
 		SH_bp_distribution.resize(max_probability_size_SH, 0.1);
 		//for UM start position distribution:
-		int min_len = getStats(idx.value()).fragStats.quantile(0.03f);
-			max_len = getStats(idx.value()).fragStats.quantile(0.97f);
+		int min_len = getStats(idx).fragStats.quantile(0.03f);
+			max_len = getStats(idx).fragStats.quantile(0.97f);
 		int min_um_distribution = min_len -  read_len;
 		int max_um_distribution = max_len -  read_len;
 		int um_distribution_size = max_um_distribution - min_um_distribution;
@@ -373,18 +374,20 @@ struct StatsManager {
 			float PI = (float)index_count/totalPairedReadCount;
 			UM_stPos_distribution[i] = PI;
 		}
-
 	}
 
 	/// merge in the contents of another stats set object:
 	void merge(const StatsManager &rhs);
 	void save(const char *filename) const;
-	void load(const char *filename);
+	void load(const char *filename){ //todo:::
+
+
+	}
 	bool isEmpty() {
 		return _group.empty();
 	}
 
-	void handleBamCramStats(const char *alignmentFilename);
+	void handleBamCramStats(const char *alignmentFilename, double *ave_depth);
 
 	struct ChromInfo {
 		ChromInfo(int32_t chr_ID_, int32_t size_) :
@@ -392,7 +395,7 @@ struct StatsManager {
 		}
 		int32_t chr_ID;
 		int32_t size;
-		int32_t highestPos = -1;
+		int32_t highestPos = size*0.2;
 	};
 
 private:

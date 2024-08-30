@@ -1,9 +1,3 @@
-/*
- * analysis.c
- *
- *  Created on: 2019年8月23日
- *      Author: fenghe
- */
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
@@ -15,6 +9,7 @@
 #include <algorithm>
 #include "cpp_lib/RefRegion.hpp"
 #include"cpp_lib/get_option_cpp.hpp"
+#include "cpp_lib/cpp_utils.hpp"
 extern "C"
 {
 #include "clib/utils.h"
@@ -2143,7 +2138,7 @@ int randomGenerateSV(int argc, char *argv[]){
 
 	int64_t total_length = 0;
 	int32_t n_targets = header->n_targets;
-	n_targets = MIN(23, n_targets);
+	n_targets = MIN(22, n_targets);//exclude X and Y
 
 
 	fprintf(stdout, "##fileformat=VCFv4.2\n");
@@ -2187,8 +2182,8 @@ int randomGenerateSV(int argc, char *argv[]){
 		xassert( kseq_read(&ref_seq) >= 0, "");
 
 		int64_t chr_len = header->target_len[chr_ID];
-		int del_num = ((10000 * chr_len) / total_length) + 1;
-		int ins_num = ((10000 * chr_len) / total_length) + 1;
+		int del_num = ((4000 * chr_len) / total_length) + 1;
+		int ins_num = ((6000 * chr_len) / total_length) + 1;
 		//int dup_num = (500 * chr_len / total_length) + 1;
 
 		//generate deletion
@@ -2231,28 +2226,88 @@ int randomGenerateSV(int argc, char *argv[]){
 		}
 	}
 
-/*
-	1	1594840	pbsv.INS.81	T	TCTCGACGGGGAGGTGGACAAG	.	PASS	SVTYPE=INS;END=1594840;SVLEN=21	GT:AD:DP	1/1:0,31:31
-	1	1598413	pbsv.DEL.82	ACACGCCTGTAATCCCAGCTACTTGGGAGGCTGAGGCAGGAGAATCACTTCAACCCGGGAGGCGGAGGTTGCAGTGAGCCGAGATCAAACCAGAGAAATCCAGCTCTGGGTGACAGAGCAAGACTCTGTTTCGGGAAAAATAAAATACATAGGCAGGGCGCGGTGGCT	A	.	PASS	SVTYPE=DEL;END=1598580;SVLEN=-167;SVANN=TANDEM	GT:AD:DP	1/1:3,26:29
-	1	1613427	pbsv.DEL.83	CAAAAAAAAAAAAAAAAAAAAAA	C	.	PASS	SVTYPE=DEL;END=1613449;SVLEN=-22;SVANN=TANDEM	GT:AD:DP	0/1:7,12:19
-	1	1649043	pbsv.DEL.84	CGCTTTCAGCTAGAGTTTGCTCTCTCTGGTTTTCGGTCTGTGACACACGCAT	C	.	PASS	SVTYPE=DEL;END=1649094;SVLEN=-51;SVANN=TANDEM	GT:AD:DP	1/1:0,33:33
-	1	1652280	pbsv.INS.85	A	ATCGCTCTGTCACCCAGGCTTTA	.	PASS	IMPRECISE;SVTYPE=INS;END=1652280;SVLEN=22;SVANN=TANDEM	GT:AD:DP	1/1:5,28:33
-	1	1654004	pbsv.INS.86	A	ATTTGAATATTTTTGTTAATTT	.	PASS	SVTYPE=INS;END=1654004;SVLEN=21	GT:AD:DP	1/1:0,38:38
-	1	1681044	pbsv.INS.87	C	CGTCCATGCATATTTTTCTGTGTGATGTGTCTGTGTGTGTGTCTCAGTGGT	.	PASS	SVTYPE=INS;END=1681044;SVLEN=50;SVANN=TANDEM	GT:AD:DP	1/1:5,21:26
-	1	1685921	pbsv.DEL.88	TCCCTGGGACCGAAGTCGCCCCA	T	.	PASS	SVTYPE=DEL;END=1685943;SVLEN=-22	GT:AD:DP	0/1:15,15:30
-	1	1855662	pbsv.INS.89	G	GACCACCCCCCAGCTCACAGCCCACCCCCCCATCTCACCGCCCAGCCCCCCCATCTCACCAGCTGCCCCCTCCCGGGCACACCGCCCACCCCCCCATCTCACCA	.	PASS	SVTYPE=INS;END=1855662;SVLEN=103;SVANN=TANDEM	GT:AD:DP	0/1:11,13:24
-	1	1860823	pbsv.INS.90	G	GGAGGGGACAGGTCTGGGGAGGCAGGAGAGAGGGTGAGGGGAGGCAGGGGAGATGGTGAGGGGAGGGAGGGGAGAGGGTGGGGGAGGGAGGGGAGAGGGTAGGGGAGGGAGGGGAGAGGGTAGGGGAGGGAGGAAGAGGAGGGGAGAGGGTAGGGAGGGAGAGGAGGGGAGAAGGGAGGGGACGCAGGGAGGGGAGAGGAAAGAGGAGGGAGGGGAGAGGGGAGGGAGGGGAGCGGGTAGGGGAGGGAAGGAGGGGAAATGGTATGGGAGGGAGGGAGGGGAGAGGGTAGGGGAGAGAGGGAGCAGAGGGGAAAGGGTAGGGGAGGGAAGGAAGGGAGAGGGTAGGGGAGGTAGGGAGGGAGGGGAGAGGGTAGGGGAGGGGAGAGGGTAGGGAGGGGAGAGGGTAGGGGAGGGAAGGAGGGGAGACGGTAGAGGAGGGAGGAGGGGAGAGGGTAGGGGAGGGAGGAAGAGGAGGGGAGAGGGTAGGGAGGGAGGGAGAGGAGAGGGGAGGGAGGGGAGGAGGGGAGAGGGTAGGGAGGGAGGGGAGGAGGGGAAGAGGGTAGGGAGGGAGGGAGAGGAGAGGGGAGGGAGGGAGGGGAGGAGGGGAGAGGGTGGGGAGGAGGGGAGAGGTTAGGGAGGGAGGGAGAGGAGGGGAGAGGGTAGGGGGGAGGGAGAGGAGGGGAGAGGGTAGAGGAGGGAAGGAGGGGAGAGGGGAGGGGAGGGAGGAAGAGGAGAGGGAGAGGGTAGGGAGGGAGAGGAGAGGAGAGGGGAGGGAGGGGAGGAGGGGAGAGGGTAGGGAGGGAGGGGAGGAGGGGAGAGGGTAGGGAGGGAGGAGAGGAGAGGGGAGGGAGGGAGGGGAGGAGGGGAGAGGGTAGGGAGGGAGGGAGAGGAGAGGGGAGGGAGGGAGGGAGGAGGGGAGAGGGTAGGGAGGGGGGAGAGAGGAGGGAGGGAGGGCAGGAGGGGAGAGGGTAGGGAGGGAGGGCAGGAGGGGAGAGGGTAGGGAGGGAGGGCAGGAGGGGAGAGGGTAGGGAGGGAGGGGAGGAAGGGAGAGGGTAGGGAGGGGAGGAGGGGAGAGGGTAGGGAGGGAGGGAGAGGAGGGGA	.	PASS	SVTYPE=INS;END=1860823;SVLEN=1100	GT:AD:DP	0/1:9,14:23
-
-**/
 	return 0;
 }
 
+struct VCF_COM_Record{
+	std::string sample;
+	bcf1_t 		r;
+	VCF_COM_Record(){
+		memset(&r, 0, sizeof(bcf1_t));
+	}
+	static inline int cmp_by_pos(const VCF_COM_Record &a, const VCF_COM_Record &b){
+		//var basic
+		if(a.r.rid != b.r.rid) 	return a.r.rid < b.r.rid;
+		if(a.r.pos != b.r.pos) 	return a.r.pos < b.r.pos;
+		return a.sample.compare(b.sample);
+	}
+};
+
+//
+int combine_sort_vcf(int argc, char *argv[]){
+	char * vcf_fn_in = argv[1];//separate by ','
+	char * vcf_fn_out = argv[2];
+
+	//get bam file list
+	std::vector<std::string> vcf_files_names;
+	char * tmp = (char *)xmalloc(1000000);
+	split_string(vcf_files_names, tmp, vcf_fn_in, ",");
+	free(tmp);
+	std::vector<BCF_FILE> bam_list;
+	for(std::string &bam_fn:  vcf_files_names){
+		bam_list.emplace_back();
+		memset(&bam_list.back(), 0, sizeof(BCF_FILE));
+		VCF_open_read(&bam_list.back(),bam_fn.c_str());
+		//bcf_hdr_append(bam_list.back().header, "##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample Strings\">\n");
+	}
+
+	std::vector<VCF_COM_Record> vcf_list;
+	uint32_t load_size = 0;
+
+	for(BCF_FILE & bcf_f: bam_list){
+		std::string sample_name(bcf_f.header->samples[0]);
+		do{
+			if(vcf_list.size() < load_size + 1)
+				vcf_list.emplace_back();
+			 vcf_list[load_size].sample = sample_name;
+		}while(VCF_next_dump(&bcf_f, &(vcf_list[load_size].r)) && vcf_list[load_size].r.rid == 0 && ++load_size);
+	}
+
+	std::sort(vcf_list.begin(), vcf_list.end(), VCF_COM_Record::cmp_by_pos);
+
+	//write::
+	//open write file
+	BCF_FILE vcf_out;
+	VCF_open_write(&vcf_out, vcf_fn_out, false);
+
+	bcf_hdr_t *write_header = bam_list[0].header;
+	//bcf_hdr_append(write_header, "##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample Strings\">\n");
+	//fprintf(stderr, "##INFO=<ID=SAMPLE,Number=1,Type=String,Description=\"Sample Strings\">\n");
+    vcf_hdr_write(vcf_out.file, write_header);
+
+    //int vcf_write(htsFile *fp, const bcf_hdr_t *h, bcf1_t *v);
+
+	//append sample info for each line:
+	for(VCF_COM_Record & vcf_r: vcf_list){
+	    //int bcf_update_id(const bcf_hdr_t *hdr, bcf1_t *line, const char *id);
+		if ( !(vcf_r.r.unpacked & BCF_UN_ALL) ) bcf_unpack(&vcf_r.r, BCF_UN_ALL);
+		bcf_add_id(write_header, &vcf_r.r, vcf_r.sample.c_str());
+		//bcf_update_info(write_header, &vcf_r.r, "SAMPLE",vcf_r.sample.c_str() , vcf_r.sample.size(), BCF_HT_STR);
+	    vcf_write(vcf_out.file, write_header, &vcf_r.r);
+	}
+	//close::
+	for(BCF_FILE & bcf_f: bam_list){
+		bcf_close(bcf_f.file);
+	}
+	return 0;
+}
 
 //------------------------------MAIN--------------------------------------//
 int analysis_main(int argc, char *argv[])
 {
 	COMMAND_HANDLER ch;
 	ch.set_main_command("analysis");
+	ch.add_function("combine_sort_vcf", "Combine vcf records from multiple files", combine_sort_vcf);
 	ch.add_function("isize_count", "Count ISIZE for a bam file [input.bam]", isize_count);
 	ch.add_function("ref_split", "Split reference file by chr_ID [input.fa]", ref_split);
 	ch.add_function("bam2Fastq", "Convert bam into fastq [input.bam, output.fq]", bam2Fastq);
@@ -2262,7 +2317,7 @@ int analysis_main(int argc, char *argv[])
 	ch.add_help_msg_back("zlib only support SEEK_SET, and read from begin P is at most 200M, not support from-where = 2: SEEK_END");
 	ch.add_function("read_ACGT_analysis", "Analysis the acgt distribution of cram read", read_ACGT_analysis);
 	ch.add_function("randomGenerateSV", "Generate 20000 random SV [sam_header_fn.sam, ref.fa, int_rand_seed]", randomGenerateSV);
-	ch.add_function("vcf_dump", "Filter and dump the SV items in VCF file using 'vcf_dump'， ‘SV_TYPE‘ or ’chrID’", vcf_dump);
+	ch.add_function("vcf_dump", "Filter and dump the SV items in VCF file using 'sample_ID'， ‘SV_TYPE‘ or ’chrID’", vcf_dump);
 	ch.add_help_msg_back("[in_fn, out_fn, sample_ID, SV_TYPE, chrID], set 'ALL' for options the get all sample or SV type");
 
 	return ch.run(argc, argv);

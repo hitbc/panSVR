@@ -23,9 +23,11 @@ BCF_FILE;
 
 
 int VCF_next(BCF_FILE *vcf);
+int VCF_next_dump(BCF_FILE *vcf, bcf1_t *r);
 int VCF_open(BCF_FILE *vcf, const char *fn);
 int VCF_open_read(BCF_FILE *vcf, const char *fn);
 int VCF_open_write(BCF_FILE *vcf, const char *fn, bool is_compression);
+void VCF_close(BCF_FILE *vcf);
 
 //tags:info
 int vcf_get_sample(bcf_hdr_t *hdr, bcf1_t *line, char *dst);//tag for sample

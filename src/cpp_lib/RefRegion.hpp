@@ -19,16 +19,9 @@ struct RefRegion{//break point candidate
 	RefRegion(){}
 	RefRegion(uint16_t	chr_ID_, int st_pos_, int	ed_pos_)
 		:chr_ID(chr_ID_), st_pos(st_pos_), ed_pos(ed_pos_){}
-	void inline Intersection(RefRegion &R)	{
-		if(R.chr_ID != chr_ID) std::cerr << this << "and" << R << "Chr_ID not same." << std::endl;
-		st_pos = MAX(st_pos, R.st_pos);ed_pos = MIN(ed_pos, R.ed_pos);
-	}
+
 	void set(uint16_t	chr_ID_, int st_pos_, int	ed_pos_){
 		chr_ID = (chr_ID_); st_pos = (st_pos_); ed_pos = (ed_pos_);
-	}
-	void inline Union(RefRegion &R){
-		if(R.chr_ID != chr_ID) std::cerr << this << "and" << R << "Chr_ID not same." << std::endl;
-		st_pos = MIN(st_pos, R.st_pos);ed_pos = MAX(ed_pos, R.ed_pos);
 	}
 	void inline Combine(RefRegion &R, bool isUnion){if(isUnion) Union(R); else Intersection(R);}
 	bool region_overlap(RefRegion &R){
@@ -37,6 +30,16 @@ struct RefRegion{//break point candidate
 		if(ed_pos < R.st_pos || R.ed_pos < st_pos)
 			return false;
 		return true;
+	}
+	bool pos_within_region(int pos){
+		if(pos >= st_pos && pos <= ed_pos)
+			return true;
+		return false;
+	}
+	bool pos_within_same_chr_region(int chr, int pos){
+		if(chr == chr_ID && pos >= st_pos && pos <= ed_pos)
+			return true;
+		return false;
 	}
 	bool region_overlap(int st_pos_, int ed_pos_){
 		if(ed_pos < st_pos_ || ed_pos_ < st_pos)
@@ -66,7 +69,7 @@ struct RefRegion{//break point candidate
 			return (chr_ID < R.chr_ID)?true:false;
 	}
 	friend std::ostream& operator<<(std::ostream& os, const RefRegion& r){
-	  os << "[" << r.chr_ID << ":" << r.st_pos << "-" << r.ed_pos << "]";
+	  os << "[" << r.chr_ID << ":" << r.st_pos << "-" << r.ed_pos <<  ", len: " << r.ed_pos - r.st_pos << "]";
 	  return os;
 	}
 	//std::string toString(bam_hdr_t* header){ return "" + header->target_name[chr_ID] + ":" + st_pos + "-" + ed_pos;	}
@@ -87,6 +90,16 @@ struct RefRegion{//break point candidate
 	uint16_t	chr_ID = 0;
 	int 		st_pos = 0;
 	int 		ed_pos = 0;
+
+private:
+	void inline Union(RefRegion &R){
+		if(R.chr_ID != chr_ID) std::cerr << this << "and" << R << "Chr_ID not same." << std::endl;
+		st_pos = MIN(st_pos, R.st_pos);ed_pos = MAX(ed_pos, R.ed_pos);
+	}
+	void inline Intersection(RefRegion &R)	{
+		if(R.chr_ID != chr_ID) std::cerr << this << "and" << R << "Chr_ID not same." << std::endl;
+		st_pos = MAX(st_pos, R.st_pos);ed_pos = MIN(ed_pos, R.ed_pos);
+	}
 };
 
 #endif /* SRC_SIGNAL_REFREGION_HPP_ */

@@ -1,11 +1,12 @@
 /*
- * assembly.hpp
+ * assembler.hpp
  *
- *  Created on: 2020年4月24日
+ *  Created on: 2021年8月9日
  *      Author: fenghe
  */
 
-#pragma once
+#ifndef CPP_LIB_ASSEMBLER_ASSEMBLER_HPP_
+#define CPP_LIB_ASSEMBLER_ASSEMBLER_HPP_
 
 #include <iosfwd>
 #include <set>
@@ -21,8 +22,9 @@
 
 #include "map_define.hpp"
 
-struct AddReadAction{
-	AddReadAction(	int position_, int read_ID_, bool isAdd_){
+//read action record where the read was add to the contig
+struct AssemblyReadAction{
+	AssemblyReadAction(	int position_, int read_ID_, bool isAdd_){
 		setBasic(position_, read_ID_, isAdd_);
 	}
 	void setBasic(int position_, int read_ID_, bool isAdd_){
@@ -42,31 +44,31 @@ struct AddReadAction{
 
 	void set_read_pos(std::string &read_seq, std::string &contig_seq, int ass_begin_offset_in_contig, int word_len, std::set<int> &remove_read_set, int read_in_ref_offset){
 
-		if(isAdd == false){
-			remove_read_set.emplace(read_ID);
-			return;
-		}
+		if(isAdd == false)
+			{ remove_read_set.emplace(read_ID); return;}
+		else
+			remove_read_set.erase(read_ID);
 
 		position_read = -1;
 		int read_kmer_num = read_seq.size() - word_len + 1;
 		search_len = 0;
 		if(position_in_contig < 0){
 			for(int i = read_kmer_num - 1; i >= 0; i--){
-				search_len++;
 				int cmp = read_seq.compare(i, word_len, contig_seq, position_in_contig - ass_begin_offset_in_contig, word_len);
 				if(cmp == 0){
 					position_read = i;
 					break;
 				}
+				search_len++;
 			}
 		}else{
 			for(int i = 0; i < read_kmer_num; i++){
-				search_len++;
 				int cmp = read_seq.compare(i, word_len, contig_seq, position_in_contig - ass_begin_offset_in_contig, word_len);
 				if(cmp == 0){
 					position_read = i;
 					break;
 				}
+				search_len++;
 			}
 		}
 
@@ -87,8 +89,7 @@ struct AddReadAction{
 		fprintf(output,	"]\n");
 	}
 };
-
-struct AssembledContig {
+struct AssemblyContig {
 	std::string seq;  ///< contigsequence
 	unsigned seedReadCount = 0;  ///< no of reads containing the seeding kmer
 	std::set<unsigned> supportReads;
@@ -98,7 +99,7 @@ struct AssembledContig {
 	int ending_reason[2]; //index: 0 for left and 1 for right; data : 0 for reason 0[maxBaseCount < o.minCoverage] and 1 for reason 1[ after seeing one repeat word]
 	int new_support_read = 0;
 	unsigned wordLength;
-	std::vector<AddReadAction> actions;
+	std::vector<AssemblyReadAction> actions;
 	int ass_begin_offset_in_contig;// the offset of begin of contig compare with the start assembly kmer
 
 	void debug_print(FILE *output) const {
@@ -138,124 +139,89 @@ struct AssembledContig {
 
 /**************************************************************/
 /// Information added to each read in the process of assembly
-struct AssemblyReadInfo {
-	AssemblyReadInfo(bool isPseudo_ = false) :
-			isPseudo(isPseudo_) {
-	}
-	bool isUsed = false;
-	/// If true, the read was 'used' but filtered out, so there is no meaningful contig id association
-	bool isFiltered = false;
+struct AssemblyReadInformation {
+	AssemblyReadInformation(bool isPseudo_ = false) : isPseudo(isPseudo_) {}
+	//bool isUsed = false;
 	/// If true, the read was an assembled contig
 	bool isPseudo = false;
 	/// Index of the contigs that this read is used in
-	std::vector<unsigned> contigIds;
+	//std::vector<unsigned> contigIds;
 };
-
-typedef std::vector<AssembledContig> Assembly;
-typedef std::vector<std::string> AssemblyReadInput;
-typedef std::vector<AssemblyReadInfo> AssemblyReadOutput;
 
 /// Input parameters for IterativeAssembler
 ///
-struct IterativeAssemblerOptions {
-	IterativeAssemblerOptions() {
-	}
-
+struct AssemblerOptions {
+	AssemblerOptions() {}
 	/// the symbol set used during assembly
 	std::string alphabet = "ACGT";
-	/// minimum basecall quality for assembly input
-	int minQval = 5;
 	/// initial word (kmer) length
 	unsigned minWordLength = 26;
-	unsigned maxWordLength = 126;
-	unsigned maxWordLength_without_enough_read = 126;
-	unsigned wordStepSize = 10;
-	unsigned minContigLength = 45;
-	/// min. coverage required for contig extension
-	unsigned minCoverage = 2;
-	/// coverage required for conservative contig sub-range
-	unsigned minConservativeCoverage = 2;
-	/// max error rates allowed during contig extension
-	double maxError = 0.35;
-	/// min. number of unused reads to enable search for more contigs
-	unsigned minUnusedReads = 3;
-	/// min. number of reads required to start assembly
-	unsigned minSupportReads = 3;
-	/// Max. number of assembly returned for a given set of reads
-	unsigned maxAssemblyCount = 20;
-	/// reuse rejected reads
-	bool reject_read_reused = false;
+	unsigned maxWordLength = 141;//todo::must be less than read length
+	unsigned word_length_list[128] = { 26, 31, 36, 41, 51, 61, 71, 81, 101, 121, 141, 999};
+
+	unsigned minCoverage = 2;/// min. coverage required for contig extension
+	unsigned minConservativeCoverage = 2;	/// coverage required for conservative contig sub-range
+	unsigned minUnusedReads = 3;/// min. number of unused reads to enable search for more contigs
+	unsigned minSupportReads = 3;	/// min. number of reads required to start assembly
+	unsigned maxAssemblyCount = 5;	/// Max. number of assembly returned for a given set of reads
+	//bool reject_read_reused = false;/// reuse rejected reads
 };
 
-struct AssemblyManager {
-
+struct MainAssemblyHandler {
+	///-----------------------------input--------------------------------------------//
 	std::vector<std::string> reads;
-	//results
-	std::vector<AssembledContig> contigs;
-	void addRead(const char *seq) {
-		reads.push_back(std::string(seq));
-	}
+	///-------------------------------output------------------------------------------//
+	std::vector<AssemblyContig> contigs;
+
 	void clear() {
 		reads.clear();
 		readInfo.clear();
 	}
-	std::vector<AssembledContig>& getResults() {
-		return contigs;
-	}
 	void assembley();
-
 	void setRepeatMode(){
-		o.reject_read_reused = true;
+		//o.reject_read_reused = true;
 		o.maxAssemblyCount = 5;
 	}
-
 	void setNormalMode(){
-		o.reject_read_reused = false;
+		//o.reject_read_reused = false;
 		o.maxAssemblyCount = 10;
 	}
 
 private:
 
+	AssemblerOptions o;
+	std::vector<AssemblyReadInformation> readInfo;
+
 	//************************get kmer count***************************************/
-	void getKmerCounts(const unsigned wordLength, str_uint_map_t &wordCount,
-			str_set_uint_map_t &wordSupportReads);
 	//buffs for getKmerCounts
 	std::set<std::string> getKmerCounts_readWords_BUFF;
+	void getKmerCounts(const unsigned wordLength, str_uint_map_t &wordCount,
+			str_set_uint_map_t &wordSupportReads);
+
 	//****************************getRepeatKmers*******************************************/
-	void getRepeatKmers(const str_uint_map_t &wordCount,
-			std::set<std::string> &repeatWords);
-	//buffs
 	str_pair_uint_map_t getRepeatKmers_wordIndices;
 	std::vector<std::string> getRepeatKmers_wordStack;
+	void getRepeatKmers(const str_uint_map_t &wordCount,
+			std::set<std::string> &repeatWords);
 
 	//**************************buildContigs********************************/
-	bool buildContigs(const unsigned wordLength, unsigned & global_maxWordCount);
-	//buffs
 	str_uint_map_t buildContigs_wordCount;
 	// records the supporting reads for each kmer
 	str_set_uint_map_t buildContigs_wordSupportReads;
 	// identify repeat kmers (i.e. circles from the de bruijn graph)
 	std::set<std::string> buildContigs_repeatWords;
 	std::set<std::string> buildContigs_unusedWords;
+	bool buildContigs(const unsigned wordLength, unsigned & global_maxWordCount);
+
 	/************************selectContigs*******************************/
-	void selectContigs(const unsigned normalReadCount);
-	//buffs
+	std::vector<AssemblyContig> tmpContigs;
 	std::set<unsigned> selectContigs_usedReads;
 	std::set<unsigned> selectContigs_usedPseudoReads;
 	std::set<unsigned> selectContigs_contigs2Remove;
 	std::set<unsigned> selectContigs_newSupportReads;
-
-	IterativeAssemblerOptions o;
-	std::vector<AssemblyReadInfo> readInfo;
-	//buffs
-	std::vector<AssembledContig> tmpContigs;
+	void selectContigs(const unsigned normalReadCount);
 
 	/***********************************Walk**************************************/
-	bool walk(const std::string &seed, const unsigned wordLength,
-			const str_uint_map_t &wordCount,
-			const str_set_uint_map_t &wordReads,
-			const std::set<std::string> &repeatWords,
-			std::set<std::string> &unusedWords, AssembledContig &contig);
 	//buffs for walk
 	std::set<std::string> walk_wordsInContig;
 	std::set<unsigned> walk_maxWordReads;
@@ -269,27 +235,12 @@ private:
 	std::set<unsigned> walk_toAdd;
 	std::set<unsigned> walk_sharedReads_alleles;
 	std::set<unsigned> walk_toUpdate;
+	bool walk(const std::string &seed, const unsigned wordLength,
+			const str_uint_map_t &wordCount,
+			const str_set_uint_map_t &wordReads,
+			const std::set<std::string> &repeatWords,
+			std::set<std::string> &unusedWords, AssemblyContig &contig);
+
 };
 
-//demo:
-/**
- * void main()
- * {
- * 		AssemblyManager am;
- * 		while(1)
- * 		{
- * 			if(END_of_all_ass_event)
- * 				break;
- * 			am.clear();
- * 			for(read in read_list)
- * 				am.addRead(read);
- * 			am.assembley();
- * 			auto &contigs = am.getResults();
- * 			for(auto &contig:contigs)
- * 				std::cout << contig;
- * 		}
- * }
- *
- */
-
-void assembly_test();
+#endif /* CPP_LIB_ASSEMBLER_ASSEMBLER_HPP_ */

@@ -16,6 +16,15 @@ int VCF_next(BCF_FILE *vcf)
 	return true;
 }
 
+int VCF_next_dump(BCF_FILE *vcf, bcf1_t *r)
+{
+	if(vcf->header == NULL)
+		return false;
+	if(bcf_read(vcf->file, vcf->header, r) == -1)
+		return false;
+	return true;
+}
+
 int VCF_open(BCF_FILE *vcf, const char *fn)
 {
 	memset(vcf,0,sizeof(BCF_FILE));
@@ -49,6 +58,11 @@ int VCF_open_write(BCF_FILE *vcf, const char *fn, bool is_compression)
 		vcf->file = hts_open(fn, "w");//open for write/VCF
 	return true;
 }
+
+void VCF_close(BCF_FILE *vcf){
+	hts_close(vcf->file);
+}
+
 //---------------------------CVF INFO-------------------------------------------//
 int vcf_get_sample(bcf_hdr_t *hdr, bcf1_t *line, char *sample_name)
 {

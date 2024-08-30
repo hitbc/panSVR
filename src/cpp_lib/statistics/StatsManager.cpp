@@ -140,7 +140,7 @@ void StatsManager::merge(const StatsManager &rhs) {
 	#define USE_RG false
 #endif
 
-void StatsManager::handleBamCramStats(const char *alignmentFilename)
+void StatsManager::handleBamCramStats(const char *alignmentFilename, double *ave_depth)
 {
 	TrackerManager rgManager(USE_RG, alignmentFilename,	defaultStatsFilename);
 	Bam_file bf = {0}; bam_file_open(alignmentFilename, referenceFilename, NULL, &bf);
@@ -152,6 +152,8 @@ void StatsManager::handleBamCramStats(const char *alignmentFilename)
 
 	bool isStopEstimation(false);
 	bool isActiveChrom(true);
+
+	uint64_t total_base = 0; int total_depth_length = 0;
 
 	while (isActiveChrom && (!isStopEstimation)) {
 		isActiveChrom = false;
@@ -170,12 +172,17 @@ void StatsManager::handleBamCramStats(const char *alignmentFilename)
 				region.ed_pos = chrom.size;
 				resetRegion_ID(&bf, &region);
 
+
 				while (bam_next(&bf)) {
 					bam1_t *b = &(bf._brec);
 					if (b->core.pos < startPos)
 						continue;
 					chrom.highestPos = b->core.pos;
 					isActiveChrom = true;
+
+					if(!bam_is_secondary(b) && !bam_is_supplementary(b)){
+						total_base += b->core.l_qseq;
+					}
 
 					StatsTracker &rgInfo(rgManager.getTracker(b));
 					rgInfo.handleReadRecordBasic(b);
@@ -196,6 +203,9 @@ void StatsManager::handleBamCramStats(const char *alignmentFilename)
 					// break from reading the current chromosome
 					break;
 				}
+
+				total_depth_length += (chrom.highestPos - startPos);
+
 				// move to next region if no read falling in the current region
 				if (chrom.highestPos <= startPos) {
 					chrom.highestPos += std::max(1, chrom.size / 100);
@@ -203,6 +213,8 @@ void StatsManager::handleBamCramStats(const char *alignmentFilename)
 			}
 		}
 	}
+
+	*ave_depth = (double)total_base/(total_depth_length);
 
 	for (auto &val : rgManager.getMap())
 		setStats(val.first, val.second.getStats());

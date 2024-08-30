@@ -115,7 +115,7 @@ char *get_reference_region_by_chrID(Bam_file * bf, const faidx_t *fai, R_region 
 
 //-----------------------------------------get tags-----------------------------------------
 //when  _bp == NULL, show header, otherwise show record
-void print_bam_record(bam1_t* _bp);
+void print_bam_record(FILE * log, bam1_t* br);
 char* bam_get_string_tag(bam1_t* _bp, char* tag);
 bool bam_get_num_tag(bam1_t* _bp, char* tag, int32_t* num);
 //-----------------------------------------from sam.h-----------------------------------------
@@ -227,7 +227,7 @@ kvec_T(path_segment, path_t);
 const uint32_t* bam_raw_cigar(bam1_t* _bp);
 unsigned 		bam_n_cigar(bam1_t* _bp);
 void 			get_cigar(bam1_t* b, path_t* apath);
-void 			print_cigar(bam1_t* b);
+void 			print_cigar(bam1_t* b, FILE *log_f);
 
 uint32_t getScoreByCigar_BWA_MEM_LIKE(bam1_t* b);
 

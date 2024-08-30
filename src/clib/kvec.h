@@ -180,6 +180,8 @@ int main() {
 		if ((v)->n == (v)->m) { \
 			(v)->m = (v)->m? (v)->m<<1 : 10; \
 			(v)->a = (type*)realloc((v)->a, sizeof(type) * (v)->m); \
+			 /*clean hash table*/\
+			 for(uint64_t i = (v)->n; i < (v)->m; i++) (v)->a[i].next = 0; \
 		} \
 		uint64_t __index__ = (__p__->key & (v)->MASK), __new_index__;\
 		while((__new_index__ = (v)->a[__index__].next) != 0){__index__ = __new_index__;}\
@@ -210,6 +212,7 @@ int main() {
 #define hash_t_search_next(v, _pre, rst) do { \
 		uint64_t __key__ = (_pre)->key;\
 		uint64_t index = (_pre)->next;\
+		if(index == 0) return NULL;\
 		(rst) = NULL;\
 		do{\
 			if(__key__ ==  (v)->a[index].key){\

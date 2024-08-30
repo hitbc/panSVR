@@ -74,7 +74,6 @@ bool AssemblyManager::walk(const std::string &seed, const unsigned wordLength,
 	//load buffs
 	std::set<std::string> &wordsInContig = walk_wordsInContig;
 	wordsInContig.clear();
-
 	const str_uint_map_t::const_iterator wordCountEnd(wordCount.cend());
 	const str_set_uint_map_t::const_iterator wordReadsEnd(wordReads.cend());
 
@@ -314,14 +313,21 @@ bool AssemblyManager::walk(const std::string &seed, const unsigned wordLength,
 				}
 
 				// update supporting reads
-				// add reads that support the selected allel
+				// add reads that support the selected allele
 				for (const unsigned rd : maxWordReads) {
-					if (contig.rejectReads.find(rd) == contig.rejectReads.end()){
+					//adding new reads into support reads, in VNTR mode[reject_read_reused == true], already rejected reads will be added to the list, too
+					//in the normal mode, those data will be assembly into more than one contigs, and already rejected reads will be discarded and not used any more
+					if(o.reject_read_reused){
 						if(contig.supportReads.insert(rd).second)
 							contig.actions.emplace_back(kmer_index, rd, true);
+					}else{
+						if (contig.rejectReads.find(rd) == contig.rejectReads.end()){
+							if(contig.supportReads.insert(rd).second)
+								contig.actions.emplace_back(kmer_index, rd, true);
+						}
 					}
 				}
-				// remove reads that do NOT support the selected allel anymore
+				// remove reads that do NOT support the selected allele anymore
 				for (const unsigned rd : supportReads2Remove) {
 					if(contig.supportReads.erase(rd) != 0){
 						contig.actions.emplace_back(kmer_index, rd, false);

@@ -57,6 +57,12 @@ void R_region2region_string(
 	sprintf(region_str, "%s:%d-%d",header->target_name[region->chr_ID], region->st_pos, region->ed_pos);
 }
 
+char* strTailModify(char* to, char *pre, char tail_char){
+	strcpy(to, pre);
+	to[strlen(to) - 1] = tail_char;
+	return to;
+}
+
 void region_string2R_region(
     bam_hdr_t* header,
 	char* region_str,
@@ -84,8 +90,9 @@ void bam_load_index(Bam_file * bf)
   if(
 		  (!fexist( strcmb(index_name, bam_cram_file_name, ".bai"))) &&
 		  (!fexist( strcmb(index_name, bam_cram_file_name, ".csi"))) &&
-		  (!fexist( strcmb(index_name, bam_cram_file_name, ".crai"))))
-  {
+		  (!fexist( strcmb(index_name, bam_cram_file_name, ".crai")))&&
+		  (!fexist( strTailModify(index_name, bam_cram_file_name, 'i')))
+  ){
 	  //build index for cram/bam files
 	  fprintf(stderr, "BAM/CRAM index is not available for file %s, now building new index file for it.\n", bam_cram_file_name);
 	  bam_build_index(bam_cram_file_name);
@@ -359,99 +366,59 @@ void getReverseStr_qual_char(char * q, int len){
  **********************************************/
 
 //when  _bp == NULL, show header, otherwise show record
-void print_bam_record(bam1_t* br)
+void print_bam_record(FILE * log, bam1_t* br)
 {
 	if(br == NULL)
 	{
-		printf(
+		fprintf(log,
 			//basics
-				"q name "
-				"chr_ID "
-				"position "
-				"direction "
-				"mapQ "
+				"q name "				"chr_ID "				"position "				"direction "				"mapQ "
 			//mate
-				"is_mate_unmapped "
-				"mate_chrom_ID "
-				"mate_position "
-				"mate_direction "
-				"insert_size "
+				"is_mate_unmapped "				"mate_chrom_ID "				"mate_position "				"mate_direction "				"insert_size "
 			//flags:
-				"secondary "
-				"supplementary "
-				"passing_QC "
-				"properly_alignment "
-				"PCR_duplication "
+				"secondary "				"supplementary "				"passing_QC "				"properly_alignment "				"PCR_duplication "
 			//strings:
-				"seq "
-				"CIGAR "
+				"seq "				"CIGAR "
 			//SA tag:
-				"chr_ID "
-				"pos "
-				"CIGAR "
-				"MAPQ ");
+				"chr_ID "				"pos "				"CIGAR "				"MAPQ "
+				);
 		return;
 	}
 
 	//basics: 	q name/chr_ID/position/direction/mapQ
-	printf( "qname:%s\t"
-			"tid:%d\t"
-			"pos:%d\t"
-			"D:%d\t"
-			"BF:%d\t"
-			"mapQ:%d\t",
-			bam_qname(br),
-			br->core.tid,
-			br->core.pos,
-			bam_is_fwd_strand(br),
-			bam_is_first(br),
-			br->core.qual
+	fprintf(log,
+			"qname:%s\t"			"tid:%d\t"			"pos:%d\t"			"D:%d\t"					"BF:%d\t"			"mapQ:%d\t",
+			bam_qname(br),			br->core.tid,		br->core.pos,		bam_is_fwd_strand(br),		bam_is_first(br),	br->core.qual
 	);
 
 	//mate: 	is_mate_unmapped/mate chrom_ID/mate position/mate direction/insert size/
-	printf( "MUM:%d "
-			"mtid:%d\t"
-			"mpos:%d\t"
-			"MD:%d "
-			"MD1:%d "
-			"isize:%d\t",
-			bam_is_mate_unmapped(br),
-			br->core.mtid,
-			br->core.mpos,
-			bam_is_mate_fwd_strand(br),
-			bam_is_mate_fwd_strand(br) + bam_is_fwd_strand(br),
-			br->core.isize
+	fprintf(log,
+			"MUM:%d "					"mtid:%d\t"			"mpos:%d\t"			"MD:%d "						"MD1:%d "													"isize:%d\t",
+			bam_is_mate_unmapped(br),	br->core.mtid,		br->core.mpos,		bam_is_mate_fwd_strand(br),		bam_is_mate_fwd_strand(br) + bam_is_fwd_strand(br),			br->core.isize
 	);
 
 	//flags:	secondary/supplementary/passing QC/properly alignment/PCR duplication
-	printf( "SEC:%d "
-			"SUP:%d "
-			"QC:%d "
-			"PAIR:%d "
-			"DUP:%d ",
-			bam_is_secondary(br),
-			bam_is_supplementary(br),
-			bam_is_filter(br),
-			bam_is_proper_pair(br),
-			bam_is_dup(br)
+	fprintf(log,
+			"SEC:%d "					"SUP:%d "					"QC:%d "				"PAIR:%d "					"DUP:%d ",
+			bam_is_secondary(br),		bam_is_supplementary(br),	bam_is_filter(br),		bam_is_proper_pair(br),		bam_is_dup(br)
 	);
 
 	//strings: 	seq/CIGAR
 	char q_seq[1024];
 	get_bam_seq(0, br->core.l_qseq, q_seq, br);
-	printf( "%s ", q_seq);
-	print_cigar(br);
+	fprintf(log, "%s ", q_seq);
+	print_cigar(br, log);
 
 	//SA tag:	chr_ID/pos/CIGAR/MAPQ
 	char* SA_tag_char = bam_get_string_tag(br, "SA");
 	if(SA_tag_char != NULL)
-		printf( "%s ", SA_tag_char);
+		fprintf(log, "%s ", SA_tag_char);
 
-	printf("\n");
+	fprintf(log, "\n");
 }
 
 
-/// Get string AUX field, return NULL if field is not found, or field is not a string
+/// Get string AUX field, return NULL if field is not found, or field if not a string
 ///
 /// \param[in] tag AUX field tag. This is a char array of length two, null term is not required
 ///
@@ -485,6 +452,7 @@ bool bam_is_int_code(char c)
 	}
 }
 
+//return true when successfully get the number tag
 bool bam_get_num_tag(bam1_t* _bp, char* tag, int32_t* num)
 {
   // retrieve the BAM tag
@@ -692,7 +660,7 @@ bool get_bam_seq_bin(int st_pos, int end_pos, uint8_t * seq, bam1_t* _bp)
 
 void get_bam_quality_str(int st_pos, int end_pos, uint8_t * quality, bam1_t* _bp)
 {
-	uint8_t* bam_quality = bam_get_qual(_bp);
+	uint8_t* bam_quality = bam_get_qual(_bp) + st_pos;
 	end_pos = MIN(end_pos, _bp->core.l_qseq);
 	while(st_pos < end_pos)
 	{
@@ -978,7 +946,7 @@ void get_cigar(bam1_t* b, path_t* apath)
 	bam_cigar_to_apath(bam_cigar, b->core.n_cigar, apath);
 }
 
-void print_cigar(bam1_t* b)
+void print_cigar(bam1_t* b, FILE *log_f)
 {
 	uint32_t* bam_cigar = bam_get_cigar(b);
 
@@ -987,9 +955,9 @@ void print_cigar(bam1_t* b)
 		int type = (int)(1 + (bam_cigar[i] & BAM_CIGAR_MASK));
 		char c_type = segment_type_to_cigar_code(type);
 		int length = (bam_cigar[i] >> BAM_CIGAR_SHIFT);
-		printf("%d%c",length,  c_type);
+		fprintf(log_f,"%d%c",length,  c_type);
 	}
-	printf(" ");
+	fprintf(log_f," ");
 }
 
 /*

@@ -53,6 +53,7 @@ struct SizeDistribution {
 
 	void filterObservationsOverQuantile(const float prob);/// filter high value outliers:
 	bool isStatSetMatch(const SizeDistribution &pss2);/// compare distributions to determine stats convergence
+	//get the count of read for a special ISIZE
 	int getSizeCount(int isize) const{
 		return _sizeMap[isize].count;
 	}

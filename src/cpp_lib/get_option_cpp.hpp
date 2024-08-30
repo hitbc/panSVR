@@ -103,7 +103,7 @@ struct option_item{
 			if(arg_type == ARG_TYPE::BLANK){ bool * c_arg = (bool *)arg_p;	c_arg[0] = false;	}
 			else if(has_default_arg){
 					 if(arg_type == ARG_TYPE::INT){ int * c_arg = (int *)arg_p;	c_arg[0] = default_value_int;	}
-				else if(arg_type == ARG_TYPE::STR){ const char**c_arg = (const char **)arg_p; *c_arg = default_value_str.c_str();	}
+				else if(arg_type == ARG_TYPE::STR){ const char**c_arg = (const char **)arg_p; *c_arg = ( char*)xmalloc(default_value_str.size() + 1);	strcpy((char *)(*c_arg), default_value_str.c_str());}
 				else if(arg_type == ARG_TYPE::DOUBLE){ double * c_arg = (double *)arg_p;	c_arg[0] = default_value_double;	}
 			}
 		}
@@ -114,7 +114,7 @@ struct option_item{
 				 if(arg_type == ARG_TYPE::BLANK){ bool * c_arg = (bool *)arg_p;	c_arg[0] = true;	}
 			else if(arg_type == ARG_TYPE::INT){ int * c_arg = (int *)arg_p;	c_arg[0] = atoi(option_char);	}
 			else if(arg_type == ARG_TYPE::STR){ const char**c_arg = (const char **)arg_p; *c_arg = option_char;	}
-			else if(arg_type == ARG_TYPE::DOUBLE){ double * c_arg = (double *)arg_p;	c_arg[0] = atof(option_char);	}
+			else if(arg_type == ARG_TYPE::DOUBLE){ double * c_arg = (double *)arg_p; c_arg[0] = atof(option_char);	}
 			return true;
 		}
 		return false;
@@ -127,6 +127,17 @@ struct option_item{
 	void show_option(FILE * output){
 		fprintf(output, "%c %s %s\n", short_option, long_option.c_str(), help_msg.c_str());
 	}
+
+	void show_current_value(FILE * output){
+		fprintf(output, "\t\t\t%s", long_option.c_str());
+		if(has_arg_pointer){
+			if(arg_type == ARG_TYPE::BLANK){ fprintf(output, "=%s", (((bool *)arg_p)[0])==true?"true":"false");	}
+			else if(arg_type == ARG_TYPE::INT){ fprintf(output, "=%d", ((int *)arg_p)[0]); }
+			else if(arg_type == ARG_TYPE::STR){ fprintf(output, "=%s", ((const char **)arg_p)[0]); }
+			else if(arg_type == ARG_TYPE::DOUBLE){ fprintf(output, "=%f", ((double *)arg_p)[0]); }
+		}
+		fprintf(output, "\n");
+	}
 };
 
 struct options_list{
@@ -138,6 +149,14 @@ struct options_list{
 	std::map<char, int> conflict_map;
 
 	bool already_parse = false;
+
+	void show_command(FILE * output, int argc, char *argv[]){
+		fprintf(output, "command=");
+		for(int i = 0; i < argc; i++){
+			fprintf(output, "%s ",  argv[i]);
+		}
+		fprintf(output, "\n");
+	}
 
 	void add_title_string(const char * title_str_){
 		title_str.append(title_str_);
@@ -269,6 +288,13 @@ struct options_list{
 			fprintf(stderr, "%s", l[i].other_help_msg.c_str());
 		}
 		return 1;
+	}
+
+	void show_c_value(FILE * output){
+		fprintf(output, "\n\t\tCurrent parameters:\n");
+		for(auto & i : l){
+			i.show_current_value(output);
+		}
 	}
 };
 
